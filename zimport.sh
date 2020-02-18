@@ -106,7 +106,9 @@ cp skell/importar_ldap.sh export/
 chmod +x export/importar_ldap.sh
 
 # Cria o diretorio backup_mailbox
-mkdir $WORKDIR/backup_mailbox
+if [ ! -d $WORKDIR/backup_mailbox ]; then
+	mkdir $WORKDIR/backup_mailbox
+fi
 
 # Realizar o dump relacionado as caixas postais
 for MAIL in $MAILBOX_LIST
@@ -131,7 +133,7 @@ do
 	
 	for i in $TABELAS
 	do
-		mysqldump --user=zimbra --password=$zimbra_mysql_password mboxgroup$MBOXGROUP $i --where="mailbox_id=$ID" --socket=$SOCKET >> $DESTINO/backup_mailbox/$MAIL\.sql
+		mysqldump --no-create-info --extended-insert=FALSE --user=zimbra --password=$zimbra_mysql_password mboxgroup$MBOXGROUP $i --where="mailbox_id=$ID" --socket=$SOCKET >> $DESTINO/backup_mailbox/$(echo $MAIL | tr [.@] _)\.sql
 	done
 done
 

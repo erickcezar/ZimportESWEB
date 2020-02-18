@@ -7,8 +7,6 @@ NORMAL_TEXT="printf '\e[1;34m%-6s\e[m\n'" #Azul
 CHOICE_TEXT="printf '\e[1;32m%s\e[0m\n'" #Verde
 NO_COLOUR="'\e[0m'" #Branco
 WORKDIR=`pwd`"/export"
-MAILBOX_LIST=`zmprov -l gaa | grep -v -E "admin@|virus-|ham.|spam.|galsync"` #TODAS AS CONTAS DO ZIMBRA, EXCETO CONTAS DE SISTEMA
-
 
 ## Testando usuário zimbra
 Run_as_Zimbra()
@@ -112,5 +110,36 @@ else
 DOMAIN="$userInput"
 $CHOICE_TEXT "Dominio informado: $DOMAIN"
 fi
+}
+##
+
+##
+Replace_Hostname()
+{   
+#$INFO_TEXT "Modificar hostname"
+read -p "O Hostname do servidor do Zimbra sera alterado (sim/nao)?" choice
+   case "$choice" in
+   y|Y|yes|s|S|sim ) 
+    $CHOICE_TEXT "O Hostname do servidor sera alterado."
+        Enter_New_Hostname 
+        Execute_Replace_Hostname
+        ;;
+   n|N|no|nao ) $CHOICE_TEXT "Sera mantido o hostname do servidor.";;
+   * ) Replace_Hostname ;;
+esac
+}
+##
+
+Execute_Replace_Hostname()
+{
+sed -i s/$OLD_HOSTNAME/$NEW_HOSTNAME/g $DESTINO/CONTAS.ldif
+sed -i s/$OLD_HOSTNAME/$NEW_HOSTNAME/g $DESTINO/LISTAS.ldif
+}
+
+##
+Clear_Workdir()
+{
+rm -f $WORKDIR/lista_contas.ldif
+rm -fr $WORKDIR/alias
 }
 ##

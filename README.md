@@ -1,4 +1,4 @@
-# ZimportESWEB
+# Zimport
 Ferramenta importação Zimbra
 
 Esta ferramenta esta sendo desenvolvida com o objetivo de migrar um conta de e-mail de Zimbra para outro servidor Zimbra.
@@ -19,7 +19,7 @@ Falta implementar ou melhorar:
 - Script para realizar o rsync dos arquivos .msg relacionando com as contas a serem migradas;
 - Verificar a possibilidade de migrar um domínio utilizando o LDAP;
 - Migração do histórico do chat;
-
+- Migração das configs do zimbra. Ex: Tabela config na database zimbra;
 
 Muitas das ideias e códigos vieram da ferramenta Z2Z, desenvolvida pelo pessoal da BKTech Brasil.
 Deixarei o link do github para que possam acessar: https://github.com/BktechBrazil/Z2Z

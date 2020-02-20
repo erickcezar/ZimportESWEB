@@ -110,7 +110,16 @@ if [ ! -d $WORKDIR/backup_mailbox ]; then
 	mkdir $WORKDIR/backup_mailbox
 fi
 
-# Realizar o dump relacionado as caixas postais
+# Criando script para importacao no servidor destino 
+true > $DESTINO/backup_mailbox/script_export.sh
+echo "#!/bin/bash" >> $DESTINO/backup_mailbox/script_export.sh
+echo "" >> $DESTINO/backup_mailbox/script_export.sh
+echo "# Antes de realizar a importacao do mboxgroup deve ser realizado a importacao do LDAP" >> $DESTINO/backup_mailbox/script_export.sh
+echo "source ~/bin/zmshutil" >> $DESTINO/backup_mailbox/script_export.sh
+echo "zmsetvars" >> $DESTINO/backup_mailbox/script_export.sh
+echo "" >> $DESTINO/backup_mailbox/script_export.sh
+
+# Realizar o dump relacionado as caixas postais e cria script para importacao
 for MAIL in $MAILBOX_LIST
 do
 	ID=`zmprov gmi $MAIL | grep mailboxId | cut -d ":" -f 2 | tr -d " "`
@@ -133,8 +142,47 @@ do
 	
 	for i in $TABELAS
 	do
-		mysqldump --no-create-info --extended-insert=FALSE --user=zimbra --password=$zimbra_mysql_password mboxgroup$MBOXGROUP $i --where="mailbox_id=$ID" --socket=$SOCKET >> $DESTINO/backup_mailbox/$(echo $MAIL | tr [.@] _)\.sql
+		mysqldump --no-create-info --extended-insert=FALSE --user=zimbra --password=$zimbra_mysql_password mboxgroup$MBOXGROUP $i --where="mailbox_id=$ID" --socket=$SOCKET >> $DESTINO/backup_mailbox/$(echo $MAIL | tr [.@] _)\_mboxgroup\.sql
 	done
+
+	# Insercao mysqldump no script
+
+	echo "#Insere o mysqldump no mboxgroup relacionado ao e-mail" >> $DESTINO/backup_mailbox/script_export.sh
+	echo "ID=\$(zmprov gmi $MAIL | grep mailboxId | cut -d ":" -f 2 | tr -d \" \")" >> $DESTINO/backup_mailbox/script_export.sh
+	echo "MBOXGROUP=\$(expr \$ID % 100)" >> $DESTINO/backup_mailbox/script_export.sh
+	echo "if [ \$MBOXGROUP -eq 0 ]; then MBOXGROUP=100; fi" >> $DESTINO/backup_mailbox/script_export.sh
+	echo "mysql mboxgroup\$MBOXGROUP < $(echo $MAIL | tr [.@] _).sql" >> $DESTINO/backup_mailbox/script_export.sh
+	echo "# Importacao mboxgroup finalizada" >> $DESTINO/backup_mailbox/script_export.sh
+	echo "# Iniciar importacao checkpoints" >> $DESTINO/backup_mailbox/script_export.sh
+	echo "" >> $DESTINO/backup_mailbox/script_export.sh
+
+	# Obtendo valores dos checkpoints
+
+	ITEMID_CHECKPOINT=`mysql zimbra --batch --skip-column-names -e "select item_id_checkpoint from mailbox where id=$ID"`
+	SIZE_CHECKPOINT=`mysql zimbra --batch --skip-column-names -e "select size_checkpoint from mailbox where id=$ID"`
+	CHANGE_CHECKPOINT=`mysql zimbra --batch --skip-column-names -e "select change_checkpoint from mailbox where id=$ID"`
+	CONTACT_COUNT=`mysql zimbra --batch --skip-column-names -e "select contact_count from mailbox where id=$ID"`
+	TRACKING_SYNC=`mysql zimbra --batch --skip-column-names -e "select tracking_sync from mailbox where id=$ID"`
+	TRACKING_IMAP=`mysql zimbra --batch --skip-column-names -e "select tracking_imap from mailbox where id=$ID"`
+	LAST_SOAP_ACCESS=`mysql zimbra --batch --skip-column-names -e "select last_soap_access from mailbox where id=$ID"`
+	LAST_PURGE_AT=`mysql zimbra --batch --skip-column-names -e "select last_purge_at from mailbox where id=$ID"`
+	
+	
+
+	# mysqldump zimbra mailbox_metadata
+	mysqldump --no-create-info --extended-insert=FALSE --user=zimbra --password=$zimbra_mysql_password zimbra mailbox_metadata --where="mailbox_id=$ID" --socket=$SOCKET >> $DESTINO/backup_mailbox/$(echo $MAIL | tr [.@] _)\_metadata\.sql
+
+	# mysqldump zimbra mailbox_metadata
+   	mysqldump --no-create-info --extended-insert=FALSE --user=zimbra --password=$zimbra_mysql_password zimbra scheduled_task --where="mailbox_id=$ID" --socket=$SOCKET >> $DESTINO/backup_mailbox/$(echo $MAIL | tr [.@] _)\_schedule_\task\.sql
+	# mysql update com os checkpoints e importando metadata e schedule_task
+	echo "# Realizando update na tabela mailbox_item na database zimbra" >> $DESTINO/backup_mailbox/script_export.sh
+	echo "mysql zimbra --batch --skip-column-names -e \"update mailbox_item set item_id_checkpoint=$ITEMID_CHECKPOINT, size_checkpoint=$SIZE_CHECKPOINT, change_checkpoint=$CHANGE_CHECKPOINT, contact_count=$CONTACT_COUNT, tracking_sync=$TRACKING_SYNC, tracking_imap=$TRACKING_IMAP, last_soap_access=$LAST_SOAP_ACCESS, last_purge_at=$LAST_PURGE_AT where id=\$ID\"" >> $DESTINO/backup_mailbox/script_export.sh
+	echo "mysql zimbra < $(echo $MAIL | tr [.@] _)_metadata.sql" >> $DESTINO/backup_mailbox/script_export.sh
+	echo "mysql zimbra < $(echo $MAIL | tr [.@] _)_schedule_task.sql" >> $DESTINO/backup_mailbox/script_export.sh
+
 done
 
+chmod +x $DESTINO/backup_mailbox/script_export.sh
+
+$INFO_TEXT "Script para importacao criado com sucesso!"
 $CHOICE_TEXT "Backup finalizado!"

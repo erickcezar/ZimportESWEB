@@ -43,7 +43,7 @@ if [ "$SERVER_HOSTNAME" != "$LDIF_HOSTNAME" ]; then
 fi
 
 # Comandos necessarios para a execucao
-declare -a COMANDOS=('ldapsearch' 'zmhostname' 'zmshutil' 'zmmailbox');
+declare -a COMANDOS=('ldapsearch' 'zmhostname' 'zmshutil');
 
 for i in "${COMANDOS[@]}"
 do

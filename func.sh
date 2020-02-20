@@ -143,3 +143,15 @@ rm -f $WORKDIR/lista_contas.ldif
 rm -fr $WORKDIR/alias
 }
 ##
+
+execute_Import_Full()
+{
+$NORMAL_TEXT "INBOX: Criando arquivo com as contas relacionadas para exportacao:" 
+$INFO_TEXT   "$WORKDIR/script_export.sh"
+for mailbox in $( echo $MAILBOX_LIST ); do
+	echo $ID
+	echo "zmmailbox -z -m $mailbox -t 0 postRestURL \"//?fmt=tgz&resolve=skip\" $EXPORT_PATH/$mailbox.tgz" >> $WORKDIR/script_import_FULL.sh #comando para import full
+done
+chmod +x $WORKDIR/backup_mailbox/script_import_FULL.sh
+}
+
